@@ -22,9 +22,10 @@ public enum PlayerState
     ITEM,
     HEALING_ITEM,
     HEALING_ITEM_DONE,
+    MAGIC_ATTACK,
+    MAGIC_ATTACK_DONE,
     END_TURN
 }
-
 
 public class BattleSystem : MonoBehaviour
 {
@@ -58,8 +59,9 @@ public class BattleSystem : MonoBehaviour
 
     public BattleState state;
     public PlayerState p_state;
-
-    public int item_num;
+    public List<EnemyBattle> enemies;
+    public List<PlayerBattle> players;
+    public int item_num, mag_num;
     
     // SINGLETON
     
@@ -88,11 +90,15 @@ public class BattleSystem : MonoBehaviour
             //StartCoroutine(prepare_battle());
         }
         this.item_num = 2;
+        this.mag_num = 0;
         this.jr_go = null;
         //prepare_battle();
         sounds[0].Play();
         player = spawn_player();
         enemy = spawn_enemy();
+        enemies.Add(enemy);
+        this.players = new List<PlayerBattle>();
+        players.Add(player);
         if (player.agi >= enemy.agi)
         {
             state = BattleState.PLAYER_TURN;
@@ -123,6 +129,26 @@ public class BattleSystem : MonoBehaviour
                     p_state = PlayerState.STANDARD;
                 }
 
+                if (Input.GetKeyDown(KeyCode.C) && this.jr_go == null) 
+                {
+                    if (player.mp >= player.magic_list[mag_num].cost)
+                    {
+                        if (player.ring_equips.Contains(player.charge_piece)) 
+                        {
+                            this.jr_go = player.spawn_magic_ring(bag.rings_list[8]);
+                        }
+                        else 
+                        { 
+                            this.jr_go = player.spawn_magic_ring(bag.rings_list[7]);
+                        }
+                        p_state = PlayerState.MAGIC_ATTACK;
+                    }
+                    else 
+                    {
+                        Debug.Log("Not Enough MP");
+                    }
+                }
+
                 if (Input.GetKeyDown(KeyCode.D) && this.jr_go == null && bag.items[bag.item_list[item_num]] >= 0)
                 {
                     bag.item_list[item_num].jr_fab = this.jr_fab;
@@ -133,7 +159,7 @@ public class BattleSystem : MonoBehaviour
 
                     Debug.Log($"{bag.item_list[item_num].name}");
                     Debug.Log($"{bag.item_list[item_num].jr_fab}");
-                    this.jr_go = player.spawn_item_ring(bag.rings_list[0]);
+                    this.jr_go = player.spawn_item_ring(bag.rings_list[9]);
                     //healing = true;
                     //p_state = PlayerState.ITEM;
                     p_state = PlayerState.HEALING_ITEM;
@@ -146,12 +172,48 @@ public class BattleSystem : MonoBehaviour
                     {
                         item_num = 0;
                         Debug.Log($"ITEM INDEX: {item_num}");
+                        Debug.Log($"Current Item: {bag.item_list[item_num].name}");
                     }
                     else
                     {
                         Debug.Log($"ITEM INDEX: {++item_num}");
+                        Debug.Log($"Current Item: {bag.item_list[item_num].name}");
+                    }
+                    
+                }
+
+                if (Input.GetKeyDown(KeyCode.X))
+                {
+                    bag.sounds[3].Play();
+                    if (mag_num + 1 == 3)
+                    {
+                        mag_num = 0;
+                        Debug.Log($"ITEM INDEX: {mag_num}");
+                        Debug.Log($"Current Magic Attack: {player.magic_list[mag_num]} | Cost: {player.magic_list[mag_num].cost}MP");
+                    }
+                    else
+                    {
+
+                        Debug.Log($"ITEM INDEX: {++mag_num}");
+                        Debug.Log($"Current Magic Attack: {player.magic_list[mag_num]} | Cost: {player.magic_list[mag_num].cost}MP");
+                    }
+
+                }
+
+                if (Input.GetKeyDown(KeyCode.V)) 
+                {
+                    if (!player.ring_equips.Contains(player.charge_piece))
+                    {
+                        player.ring_equips.Add(player.charge_piece);
+                        Debug.Log($"BATTLE SYSTEM: {player.name} equips a {player.charge_piece.name} to their Judgement Ring");
+                    }
+                    else 
+                    {
+                        player.ring_equips.Remove(player.charge_piece);
+                        Debug.Log($"BATTLE SYSTEM: {player.name} unequips their {player.charge_piece.name} from their Judgement Ring");
                     }
                 }
+
                 // HANDLE STATE OF PLAYER TURN HERE
                 switch (p_state) 
                 {
@@ -165,6 +227,19 @@ public class BattleSystem : MonoBehaviour
                         if (player.hits >= 1 || player.strikes >= 1 || player.misses >= 1) 
                         {
                             p_state = PlayerState.HEALING_ITEM_DONE;
+                        }
+                        break;
+                    case PlayerState.MAGIC_ATTACK://player.magic_list[0].ring_pieces
+                        if (player.ring_equips.Contains(player.charge_piece)) 
+                        {
+                            if (player.charges >= 1 && player.modulates >= 1 || player.charges >= 1 && player.strikes >= 1 || player.misses >= 1) 
+                            {
+                                p_state = PlayerState.MAGIC_ATTACK_DONE;
+                            }
+                        }
+                        if (player.steps >= 1 && player.modulates >= 1 || player.steps >= 1 && player.strikes >= 1 || player.misses >= 1)
+                        {
+                            p_state = PlayerState.MAGIC_ATTACK_DONE;
                         }
                         break;
                     case PlayerState.STANDARD_ATTACK_DONE:
@@ -183,7 +258,28 @@ public class BattleSystem : MonoBehaviour
                         player.strikes = 0;
                         player.misses = 0;
                         StartCoroutine(RemoveRing());
+                        if (!player.is_miss)
+                        {
+                            bag.sounds[item_num].Play();
+                        }
+                        player.is_miss = false;
                         bag.sounds[item_num].Play();
+                        p_state = PlayerState.END_TURN;
+                        break;
+                    case PlayerState.MAGIC_ATTACK_DONE:
+                        player.HandleMagicAttack(player.magic_list[mag_num], enemies);//player.magic_list[0], enemies);
+                        player.sp -= 1;
+                        player.hits = 0;
+                        player.strikes = 0;
+                        player.steps = 0;
+                        player.modulates = 0;
+                        player.misses = 0;
+                        StartCoroutine(RemoveRing());
+                        if (!player.is_miss)
+                        {
+                            bag.sounds[mag_num + 4].Play(); // currently dumb bullshit
+                        }
+                        player.is_miss = false;
                         p_state = PlayerState.END_TURN;
                         break;
                     case PlayerState.END_TURN:
@@ -206,7 +302,7 @@ public class BattleSystem : MonoBehaviour
 
                 break;
             case BattleState.ENEMY_TURN:
-                enemy.Attack(player);
+                enemy.delayed_attack_pattern(players);
                 if (player.hp <= 0) 
                 {
                     Debug.Log("PLAYER LOSES");
@@ -229,7 +325,6 @@ public class BattleSystem : MonoBehaviour
                 state = BattleState.DONE;
                 break;
             case BattleState.LOSE:
-
                 break;
             case BattleState.DONE:
                 break;
@@ -243,7 +338,7 @@ public class BattleSystem : MonoBehaviour
         // Instantiate the actors in a battle
         GameObject p_go = Instantiate(p_fab, p_loc_init);
         PlayerBattle player = p_go.GetComponent<PlayerBattle>();
-        Debug.Log($"Player Game Object '{player.name}' Created.");
+        Debug.Log($"BATTLE SYSTEM: Player Game Object '{player.name}' Created.");
         return player;
     }
 
@@ -252,27 +347,15 @@ public class BattleSystem : MonoBehaviour
         // Instantiate the actors in a battle
         GameObject e_go = Instantiate(e_fab, e_loc_init);
         EnemyBattle enemy = e_go.GetComponent<EnemyBattle>();
-        Debug.Log($"Enemy Game Object '{enemy.name}' Created.");
+        Debug.Log($"BATTLE SYSTEM: Enemy Game Object '{enemy.name}' Created.");
         return enemy;
     }
     
     IEnumerator RemoveRing() 
     {
-        Debug.Log("DEBUG: Removing Ring From Scene");
+        Debug.Log("BATTLE SYSTEM: Removing Ring From Scene");
         float s = 0.5f;
         yield return new WaitForSeconds(s);
         DestroyImmediate(GameObject.FindGameObjectsWithTag("Ring")[0]);
     }
-    /*
-    JudgmentRing spawn_ring(PlayerBattle player)
-    {
-        Debug.Log("PB: Getting Ring Input...");
-        player.ring_finished = false;
-        //.is_done = false;
-        GameObject jr_go = Instantiate(jr_fab, jr_loc_init);
-        JudgmentRing judgment_ring = jr_go.GetComponent<JudgmentRing>();
-        Debug.Log($"Ring Created");
-        return jr;
-    }
-    */
 }

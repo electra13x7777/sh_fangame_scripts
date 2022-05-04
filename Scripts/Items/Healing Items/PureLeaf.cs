@@ -5,12 +5,13 @@ using UnityEngine;
 public class PureLeaf : Item
 {
     public override string name { get { return "Pure Leaf"; } }
-    public override string description { get { return "A spiritual plant that restores lost magic power. Grown in secret by the descendants of witches, the exact method to cultivate it remains a mystery."; } }
+    public override string description { get { return "Grown on the South American plains, this relaxant relieves deep down stress when eaten. At the present time no adverse side effects have been reported."; } }
 
 
     //public override AudioSource sound;
     //public GameObject jr_go;
     public Bag bag;
+    // TODO: PLEASE REMOVE THIS FROM ALL ITEMS
     public override GameObject jr_fab { get { return new GameObject(); } }//bag.rings_list[0]; } }
     public override int ring_pieces { get { return 1; } }
     public AudioSource sound;

@@ -2,6 +2,35 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum MagicType
+{
+    NONE,
+    FIRE,
+    ICE,
+    WIND,
+    EARTH,
+    DARK,
+    LIGHT
+}
+
+public enum ItemType
+{
+    CONSUMABLE,
+    EQUIPMENT
+}
+
+public enum EquipType 
+{
+    // EQUIP TYPES FOR PLAYER BODY - EFFECTS STATS
+    WEAPON,
+    HEAD,
+    BODY,
+    LEGS,
+    // EQUIP TYPES FOR RING - EFFECTS RING IN VARIOUS WAYS
+    RING_EQUIP, // WILL ALTER THE WAY THE PLAYER'S RING WORKS
+    RING_EFFECT // Will work like the standard ring items in SH:FtNW
+}
+
 // Bag
 //
 // The Bag will act as a singleton which contains a list of items for all player actors to use
@@ -21,7 +50,12 @@ public class Bag : MonoBehaviour
     {
         get; private set;
     }
-    
+
+
+    public MagicType magic_type;
+    public ItemType item_type;
+    public EquipType equip_type;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -117,4 +151,12 @@ public class Bag : MonoBehaviour
         return ret;
 
     }
+
+    // Equip related stuff
+
+    public static void EquipToPlayer(PlayerBattle player, Equip equip) 
+    {
+        return; //if()
+    }
+
 }

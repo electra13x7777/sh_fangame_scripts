@@ -3,11 +3,20 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
+public enum PlayerBattleState 
+{
+    WAITING_FOR_PLAYER_INPUT,
+    STANDARD,
+    MAGIC,
+    ITEM,
+    RING_DONE
+}
+
 public class PlayerBattle : MonoBehaviour
 {
 
     public int hp, mp, sp, place_holder_dmg; // Health, Magic, Sanity
-    public int agi;
+    public int p_atk, p_def, s_atk, s_def, agi;
     public float stock; // Stock Gauge
     public string name;
     public int MAX_HP, MAX_MP, MAX_SP;
@@ -17,7 +26,7 @@ public class PlayerBattle : MonoBehaviour
     public GameObject jr_fab;
     public Transform jr_loc_init;
     public GameObject jr_go;
-    public int strikes, hits, misses;
+    public int strikes, hits, steps, modulates, charges, misses;
     public int ring_pieces;
     public bool ring_finished, mode_db, is_done, is_miss, is_dead, is_winner, is_tech;
 
@@ -26,6 +35,14 @@ public class PlayerBattle : MonoBehaviour
     public int ring_num;
     [SerializeField]
     Dial dial;
+    public MagicType type;
+    public Magic red_nova;
+    public Magic rock_bump;
+    public Magic hail_dust;
+    public List<Magic> magic_list;
+    public Equip charge_piece;
+    public List<Equip> ring_equips;
+    public PlayerBattleState state;
     //JudgmentRing jr;
 
     public PlayerBattle()
@@ -40,7 +57,6 @@ public class PlayerBattle : MonoBehaviour
         */
     }
 
-    //public string[] movelist = new string[] {}
     // Start is called before the first frame update
     void Start()
     {
@@ -58,38 +74,98 @@ public class PlayerBattle : MonoBehaviour
             this.MAX_MP = this.mp;
             this.MAX_SP = this.sp;
             this.place_holder_dmg = 18;
+            this.p_atk = 0;
+            this.p_def = 0;
+            this.s_atk = 0;
+            this.s_def = 0;
             this.agi = 10;
             this.name = "Raidou";
             this.ring_pieces = 3;
             this.strikes = 0;
             this.hits = 0;
+            this.charges = 0;
             this.misses = 0;
             this.is_dead = false;
             this.is_miss = false;
             this.is_winner = false;
             this.is_tech = true;
             this.ring_num = 5;
+            this.magic_list = new List<Magic>();
+            red_nova = new RedNova();
+            rock_bump = new RockBump();
+            hail_dust = new HailDust();
+            this.magic_list.Add(red_nova);
+            this.magic_list.Add(rock_bump);
+            this.magic_list.Add(hail_dust);
+            this.type = MagicType.NONE;
+            this.ring_equips = new List<Equip>();
+            this.charge_piece = new ChargePiece();
+            this.state = PlayerBattleState.WAITING_FOR_PLAYER_INPUT;
         }
     }
-
-
 
     // Update is called once per frame
     void Update()
     {
-        //Instance = Dial.GetInstance();
-        if(dial != null && this.jr_go != null)
+        if (dial != null && this.jr_go != null)
         {
-            this.hits = dial.hit_count;
-            this.strikes = dial.strike_count;
-            this.misses = dial.miss_count;
-            if (hits >= ring_pieces || strikes >= ring_pieces || hits + strikes >= ring_pieces || misses >= 1) 
+            switch (state)
             {
-                //StartCoroutine(RemoveDial());
-                Destroy(dial.gameObject);
-                //DestroyImmediate(GameObject.FindGameObjectsWithTag("Ring")[0]);
+                case PlayerBattleState.WAITING_FOR_PLAYER_INPUT:
+                    break;
+                case PlayerBattleState.STANDARD:
+                    this.hits = dial.hit_count;
+                    this.strikes = dial.strike_count;
+                    this.misses = dial.miss_count;
+                    if (hits >= ring_pieces || strikes >= ring_pieces || hits + strikes >= ring_pieces || misses >= 1)
+                    {
+                        //StartCoroutine(RemoveDial());
+                        Destroy(dial.gameObject);
+                        state = PlayerBattleState.RING_DONE;
+                        //DestroyImmediate(GameObject.FindGameObjectsWithTag("Ring")[0]);
+                    }
+                    break;
+                case PlayerBattleState.ITEM:
+                    this.hits = dial.hit_count;
+                    this.strikes = dial.strike_count;
+                    this.misses = dial.miss_count;
+                    if (hits >= 1 || strikes >= 1 || hits + strikes >= 1 || misses >= 1)
+                    {
+                        Destroy(dial.gameObject);
+                        state = PlayerBattleState.RING_DONE;
+                    }
+                    break;
+                case PlayerBattleState.MAGIC:
+                    if (this.ring_equips.Contains(charge_piece)) 
+                    {
+                        this.charges = dial.charge_count;
+                        this.modulates = dial.modulate_count;
+                        this.strikes = dial.strike_count;
+                        this.misses = dial.miss_count;
+                        if (charges >= 1 && modulates >= 1 || charges >= 1 && strikes >= 1 || misses >= 1)
+                        {
+                            //StartCoroutine(RemoveDial());
+                            Destroy(dial.gameObject);
+                            state = PlayerBattleState.RING_DONE;
+                        }
+                    }
+                    this.steps = dial.step_count;
+                    this.modulates = dial.modulate_count;
+                    this.strikes = dial.strike_count;
+                    this.misses = dial.miss_count;
+                    if (steps >= 1 && modulates >= 1 || steps >= 1 && strikes >= 1 || misses >= 1)
+                    {
+                        //StartCoroutine(RemoveDial());
+                        Destroy(dial.gameObject);
+                        state = PlayerBattleState.RING_DONE;
+                    }
+                    break;
+                case PlayerBattleState.RING_DONE:
+                    break;
             }
         }
+          
+        
         if (this.hp <= 0)
         {
             is_dead = true;
@@ -104,7 +180,11 @@ public class PlayerBattle : MonoBehaviour
         {
             this.hits = 0;
             this.strikes = 0;
+            this.steps = 0;
+            this.modulates = 0;
+            this.charges = 0;
             this.misses = 0;
+            this.is_miss = false;
         }
         if (this.is_winner) 
         {
@@ -149,6 +229,7 @@ public class PlayerBattle : MonoBehaviour
         // Kinda f'd up way to get the dial when it is spawned in
         this.dial = GameObject.FindGameObjectsWithTag("Dial")[0].GetComponent<Dial>();
         //this.jr = GameObject.FindGameObjectsWithTag("Ring")[0].GetComponent<JudgmentRing>();
+        this.state = PlayerBattleState.STANDARD;
         return jr_go;
         //return jr;
     }
@@ -162,13 +243,27 @@ public class PlayerBattle : MonoBehaviour
         Debug.Log($"Ring Created");
         // Kinda f'd up way to get the dial when it is spawned in
         this.dial = GameObject.FindGameObjectsWithTag("Dial")[0].GetComponent<Dial>();
+        this.state= PlayerBattleState.ITEM;
+        return jr_go;
+    }
+
+    // when spawning a ring to use an item we need to get the Magic's ring fab
+    public GameObject spawn_magic_ring(GameObject ring)
+    {
+        Debug.Log("PB: Getting Ring Input For Magic Attack...");
+        this.ring_finished = false;
+        GameObject jr_go = Instantiate(ring, jr_loc_init);
+        Debug.Log($"Ring Created");
+        // Kinda f'd up way to get the dial when it is spawned in
+        this.dial = GameObject.FindGameObjectsWithTag("Dial")[0].GetComponent<Dial>();
+        this.state = PlayerBattleState.MAGIC;
         return jr_go;
     }
 
 
-///////////////////////////////////////////////////////////////////////////////////////////
-//                               HANDLE RING INPUT RESULTS
-///////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    //                               HANDLE RING INPUT RESULTS
+    ///////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -226,9 +321,10 @@ public class PlayerBattle : MonoBehaviour
         if (this.misses >= 1)
         {
             Debug.Log($"{this.name} missed and wasn't able to heal!");
+            this.is_miss = true;
             return;
         }
-        if (this.strikes >= item.ring_pieces || this.strikes >= 1)
+        if (this.strikes >= 1)
         {
             item.UseItem(this, true);
         }
@@ -238,52 +334,21 @@ public class PlayerBattle : MonoBehaviour
         }
     }
 
-    /*
-    IEnumerator RemoveDial()
+    public void HandleMagicAttack(Magic magic, List<EnemyBattle> enemies) 
     {
-        Debug.Log("Killing Dial");
-        float s = 0.5f;
-        yield return new WaitForSeconds(s);
-        Destroy(this.dial.gameObject);
+        if (this.misses >= 1)
+        {
+            Debug.Log($"{this.name} missed and wasn't able to cast {magic.name}!");
+            this.is_miss = true;
+            return;
+        }
+        if (this.strikes >= 1)
+        {
+            magic.UseMagic(this, enemies, true);
+        }
+        else 
+        {
+            magic.UseMagic(this, enemies, true);
+        }
     }
-
-    {
-        Debug.Log("PLAYERBATTLE.STANDARDATTACK");
-
-        // set direction of target
-        int damage_dealt = place_holder_dmg;
-        Vector3 attack_dir = (e.GetPosition() - this.GetPosition()).normalized;
-        // play animation here
-        ring_finished = false;
-        this.is_done = false;
-        this.jr_go = Instantiate(jr_fab, jr_loc_init);
-        Debug.Log("Ring Created");
-        //jr_go.GetComponent<>
-        //jr_fab.SetActive(true);
-
-        //if(autoring)
-
-        if (this.hits >= 1 || this.strikes >= 1)
-        {
-            //Destroy(this.jr_go);
-            //ring_finished = true;
-        }
-        if (ring_finished)
-        {
-            if (this.hits > 0)
-            {
-                damage_dealt *= this.hits;
-                //Destroy(this.jr_go);
-            }
-            if (this.strikes > 0)
-            {
-                damage_dealt = ((damage_dealt / 2) + damage_dealt) * this.strikes;
-                //Destroy(this.jr_go);
-            }
-            Debug.Log($"{this.name} deals {damage_dealt} damage to {e.name}!");
-            e.hp -= damage_dealt;
-            //this.is_done=true;
-        }
-    }*/
 }
-

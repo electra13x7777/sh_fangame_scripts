@@ -8,11 +8,14 @@ public enum DialHitState
     STRIKE,   // Working
     HIT,      // Working
     CHARGE,   // Implemented - More Testing Needed
-    STEP,     //
-    MODULATE, //  
+    STEP,     // Working
+    MODULATE, // Working
     MISS      // Working
 }
 
+// Class: Dial
+// 
+// Description: Defines the default behavior of the dial monobehavior.
 public class Dial : MonoBehaviour
 {
     public float dial_speed;
@@ -21,12 +24,12 @@ public class Dial : MonoBehaviour
     public AudioSource[] sounds;
 
     [SerializeField]
-    public int hit_count, strike_count, step_count, miss_count, charge_frames;
+    public int hit_count, strike_count, step_count, modulate_count, miss_count, charge_count;
     
     // rotation related
     public Transform origin;
     public Quaternion q, originalRotation, currentRotation, del_ring;
-    public bool is_rotating_around_parent;
+    public bool is_rotating_around_parent, on_hit_area, has_hit;
     private Vector3 originalPosition;
 
     [SerializeField]
@@ -47,11 +50,15 @@ public class Dial : MonoBehaviour
         Debug.Log($"{player.name}'s Ring Start");
         hit_count = 0;
         step_count = 0;
+        modulate_count = 0;
         strike_count = 0;
         miss_count = 0;
-        charge_frames = 0;
+        charge_count = 0;
         is_charge = false;
         dial_sound_played = false;
+
+        this.on_hit_area = false;
+        this.has_hit = false;
         state = DialHitState.MISS; // Initialize to MISS; Works without this but wanna make sure; We will never have a ring start on non miss.
 
         // 
@@ -84,7 +91,32 @@ public class Dial : MonoBehaviour
             dial_sound_played = true;
         }
         this.rotate_dial();
-        
+
+
+        // HANDLE WHEN PLAYER MISSES A HIT AREA
+        switch (state) 
+        {
+            case DialHitState.MISS:
+                if (!has_hit && on_hit_area)
+                {
+                    has_hit = false;
+                    on_hit_area = false;
+                    is_charge = false;
+                    sounds[2].Play(); // Miss Sound
+                    Debug.Log("MISS!");
+                    miss_count = 1;
+                }
+                else if (has_hit && on_hit_area) 
+                {
+                    has_hit = false;
+                    on_hit_area = false;
+                    //is_charge = false;
+                }
+                break;
+            default:
+                break;
+        }
+
         //Debug.Log(sounds[3]);
         /*
         // Autodel ring
@@ -97,6 +129,7 @@ public class Dial : MonoBehaviour
         }
         */
         // Handle Key Downs on 
+
 
         if (Input.GetKeyDown(KeyCode.Z))
         {
@@ -114,6 +147,10 @@ public class Dial : MonoBehaviour
                     player.strikes++; // not working
                     if (flag_hitcount)
                         Debug.Log($"STRIKE! {strike_count}");
+                    if (!has_hit)
+                    {
+                        has_hit = true;
+                    }
                     sounds[0].Play(); // Strike Sound                
                     break;
                 case DialHitState.HIT:
@@ -122,22 +159,32 @@ public class Dial : MonoBehaviour
                     hit_count++;
                     if (flag_hitcount)
                         Debug.Log($"HIT! {hit_count}");
+                    if (!has_hit)
+                    {
+                        has_hit = true;
+                    }
                     sounds[1].Play(); // Hit Sound
                     player.hits++;
                     break;
-                case DialHitState.STEP: // need to create functionality
+                case DialHitState.STEP: // 
                     if (!flag_hitcount)
                         Debug.Log("STEP!");
-                    hit_count++;
+                    step_count++;
                     if (flag_hitcount)
                         Debug.Log($"STEP! {step_count}");
+                    if (!has_hit)
+                    {
+                        has_hit = true;
+                    }
                     sounds[1].Play(); // Hit Sound
                     break;
                 case DialHitState.MODULATE:
                     if (!flag_hitcount)
                         Debug.Log($"MODULATE!");
+                    modulate_count++;
                     if(flag_hitcount)
-                        Debug.Log($"MODULATE!");
+                        Debug.Log($"MODULATE! {modulate_count}");
+                    sounds[1].Play(); // Hit Sound
                     break;
                 case DialHitState.MISS:
                     Debug.Log("MISS!");
@@ -153,16 +200,34 @@ public class Dial : MonoBehaviour
             switch (state) 
             {
                 case DialHitState.CHARGE:
-                    Debug.Log($"CHARGING! {++charge_frames}"); // prefix increment in an interpolated string in a log statement looks really sexy goddam
+                    Debug.Log($"CHARGING! {++charge_count}"); // prefix increment in an interpolated string in a log statement looks really sexy goddam
                     sounds[0].Play(); // Charge Sound
+                    //is_charge = true;
+                    if (!has_hit)
+                    {
+                        has_hit = true;
+                    }
+                    if (!is_charge)
+                    {
+                        is_charge = true;
+                    }
                     break;
                 case DialHitState.MISS:
-                    charge_frames = 0;
+                    if (!is_charge) 
+                    {
+                        break;
+                    }
+                    has_hit = false;
+                    on_hit_area = false;
+                    is_charge = false;
+                    miss_count = 1;
                     Debug.Log("MISS AND CHARGE BREAK!");
                     sounds[1].Play(); // Miss Sound
                     break;
             }
         }
+
+
         if(currentRotation.z == del_ring.z && currentRotation.w == del_ring.w)
         //if(this.transform.rotation.z == del_ring.transform.rotation.z && this.transform.rotation.w == del_ring.transform.rotation.w) 
         {
@@ -229,6 +294,14 @@ public class Dial : MonoBehaviour
             if (collider_flag)
                 Debug.Log("DIAL: ON STRIKE AREA");
             state = DialHitState.STRIKE;
+            if (!on_hit_area)
+            {
+                on_hit_area = true;
+            }
+            if (!has_hit) 
+            {
+                has_hit = false;
+            }
         }
 
         // now check for hit area
@@ -237,16 +310,39 @@ public class Dial : MonoBehaviour
             if (collider_flag)
                 Debug.Log("DIAL: ON HIT AREA");
             state = DialHitState.HIT;
+            if (!on_hit_area)
+            {
+                on_hit_area = true;
+            }
+            if (!has_hit)
+            {
+                has_hit = false;
+            }
         }
         // Step Areas
         else if (other.gameObject.CompareTag("StepArea"))
         {
-
+            if (collider_flag)
+                Debug.Log("DIAL: ON STEP AREA");
+            state = DialHitState.STEP;
+            if (!on_hit_area)
+            {
+                on_hit_area = true;
+            }
+            if (!has_hit)
+            {
+                has_hit = false;
+            }
         }
         else if (other.gameObject.CompareTag("ModulateArea")) 
         {
-            //if()
-        
+            if (collider_flag)
+                Debug.Log("DIAL: ON MODULATE AREA");
+            state = DialHitState.MODULATE;
+            if (!on_hit_area)
+            {
+                on_hit_area = true;
+            }
         }
         // Charge Areas are a new mechanic I'm coming up with to function similar to how a charge character works in a fighting game
         // You need to hold the button down to get the best results from them
@@ -255,13 +351,23 @@ public class Dial : MonoBehaviour
             if (collider_flag)
                 Debug.Log("DIAL: ON CHARGE AREA");
             state = DialHitState.CHARGE;
-            is_charge = true;
+            if (!on_hit_area)
+            {
+                on_hit_area = true;
+            }
+            if (!has_hit)
+            {
+                has_hit = false;
+            }
+            if (!is_charge) { is_charge = true; }
+                
         }
         // check if miss
         else if (other.gameObject.CompareTag("MissArea"))
         {
             if (collider_flag)
                 Debug.Log("DIAL: ON MISS AREA");
+
             state = DialHitState.MISS;
             
             // use this to reset all other flags 

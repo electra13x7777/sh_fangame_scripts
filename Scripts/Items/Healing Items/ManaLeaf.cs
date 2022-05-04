@@ -31,7 +31,7 @@ public class ManaLeaf : Item
         }
         else
         {
-            player.hp += base_heal_amt;
+            player.mp += base_heal_amt;
             Debug.Log($"ITEM MANALEAF: {player.name} heals for {base_heal_amt} Magic Points!");
         }
     }          // currently just heals
