@@ -41,6 +41,7 @@ public class PureLeaf : Item
         //this.sound.Play();
         //heal()
         heal_sp(player, is_strike);
+        Bag.RemoveFromBag(this);
         return;
         //this.jr_go = player.spawn_item_ring()
     }

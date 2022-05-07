@@ -24,12 +24,12 @@ public class Dial : MonoBehaviour
     public AudioSource[] sounds;
 
     [SerializeField]
-    public int hit_count, strike_count, step_count, modulate_count, miss_count, charge_count;
+    public int hit_count, strike_count, step_count, modulate_count, miss_count, charge_count, total_charge_frames;
     
     // rotation related
     public Transform origin;
-    public Quaternion q, originalRotation, currentRotation, del_ring;
-    public bool is_rotating_around_parent, on_hit_area, has_hit;
+    public Quaternion q, originalRotation, currentRotation; //, del_ring;
+    public bool is_rotating_around_parent, on_hit_area, has_hit, first_hit, first_strike;
     private Vector3 originalPosition;
 
     [SerializeField]
@@ -56,7 +56,8 @@ public class Dial : MonoBehaviour
         charge_count = 0;
         is_charge = false;
         dial_sound_played = false;
-
+        this.first_hit = false;
+        this.first_strike = false;
         this.on_hit_area = false;
         this.has_hit = false;
         state = DialHitState.MISS; // Initialize to MISS; Works without this but wanna make sure; We will never have a ring start on non miss.
@@ -70,7 +71,7 @@ public class Dial : MonoBehaviour
         Quaternion origin_rot = new Quaternion(transform.rotation.x, transform.rotation.y, transform.rotation.z, 0);
         this.originalRotation = origin_rot;
         this.currentRotation = origin_rot;
-        this.del_ring = new Quaternion(0f, 0f, 0.19234f, 0.98133f);
+        //this.del_ring = new Quaternion(0f, 0f, 0.19234f, 0.98133f);
         this.is_rotating_around_parent = true;
         player.is_miss = false;
         //rotate_dial();
@@ -99,9 +100,12 @@ public class Dial : MonoBehaviour
             case DialHitState.MISS:
                 if (!has_hit && on_hit_area)
                 {
+                    // TODO: Add check for normal ring and update accordingly
                     has_hit = false;
                     on_hit_area = false;
                     is_charge = false;
+                    this.first_hit = false;
+                    this.first_strike = false;
                     sounds[2].Play(); // Miss Sound
                     Debug.Log("MISS!");
                     miss_count = 1;
@@ -113,24 +117,14 @@ public class Dial : MonoBehaviour
                     //is_charge = false;
                 }
                 break;
+            case DialHitState.CHARGE:
+                total_charge_frames++;
+                break;
             default:
                 break;
         }
-
-        //Debug.Log(sounds[3]);
-        /*
-        // Autodel ring
-        if (flag_delring)
-        {
-            if (this.transform.rotation.w >= del_ring.w) 
-            {
-            
-            }
-        }
-        */
-        // Handle Key Downs on 
-
-
+        
+        // HANDLE SINGLE-HIT HIT AREAS
         if (Input.GetKeyDown(KeyCode.Z))
         {
             // Current Execution pattern for non charge rings
@@ -151,6 +145,14 @@ public class Dial : MonoBehaviour
                     {
                         has_hit = true;
                     }
+                    if (!this.first_hit && !this.first_strike) 
+                    {
+                        this.first_strike = true;
+                    }
+                    else if (this.first_hit && !this.first_strike)
+                    {
+                        this.first_strike = false;
+                    }
                     sounds[0].Play(); // Strike Sound                
                     break;
                 case DialHitState.HIT:
@@ -162,6 +164,14 @@ public class Dial : MonoBehaviour
                     if (!has_hit)
                     {
                         has_hit = true;
+                    }
+                    if (!this.first_hit && !this.first_strike)
+                    {
+                        this.first_hit = true;
+                    }
+                    else if(!this.first_hit && this.first_strike) 
+                    {
+                        this.first_hit = false;
                     }
                     sounds[1].Play(); // Hit Sound
                     player.hits++;
@@ -185,6 +195,7 @@ public class Dial : MonoBehaviour
                     if(flag_hitcount)
                         Debug.Log($"MODULATE! {modulate_count}");
                     sounds[1].Play(); // Hit Sound
+                    player.modulates++;
                     break;
                 case DialHitState.MISS:
                     Debug.Log("MISS!");
@@ -194,7 +205,9 @@ public class Dial : MonoBehaviour
                     break;
             }
         }
-        // Handle Key Holds (Probably just for charge areas
+
+        // Handle Key Holds (Probably just for charge areas)
+        // THIS IS KINDA BUGGY
         if (Input.GetKey(KeyCode.Z) && is_charge) 
         {
             switch (state) 
@@ -225,14 +238,6 @@ public class Dial : MonoBehaviour
                     sounds[1].Play(); // Miss Sound
                     break;
             }
-        }
-
-
-        if(currentRotation.z == del_ring.z && currentRotation.w == del_ring.w)
-        //if(this.transform.rotation.z == del_ring.transform.rotation.z && this.transform.rotation.w == del_ring.transform.rotation.w) 
-        {
-            player.ring_finished = true;
-            Debug.Log("Del Ring");
         }
 
             // Update our player
@@ -304,7 +309,7 @@ public class Dial : MonoBehaviour
             }
         }
 
-        // now check for hit area
+        // Hit Areas
         else if (other.gameObject.CompareTag("HitArea"))
         {
             if (collider_flag)
@@ -334,6 +339,7 @@ public class Dial : MonoBehaviour
                 has_hit = false;
             }
         }
+        // Modulate Areas
         else if (other.gameObject.CompareTag("ModulateArea")) 
         {
             if (collider_flag)
@@ -343,6 +349,7 @@ public class Dial : MonoBehaviour
             {
                 on_hit_area = true;
             }
+            //modulate_count++;
         }
         // Charge Areas are a new mechanic I'm coming up with to function similar to how a charge character works in a fighting game
         // You need to hold the button down to get the best results from them
@@ -374,6 +381,4 @@ public class Dial : MonoBehaviour
 
         }
     }
-
-    //
 }

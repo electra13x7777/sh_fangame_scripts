@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class RockBump : Magic
 {
@@ -13,7 +14,7 @@ public class RockBump : Magic
 
     public override int base_damage { get { return 4; } }
     public override int cost { get { return 16; } }
-
+    public override int ring_index { get { return 7; } }
     public int hits { get { return 5; } }
 
 
@@ -61,6 +62,7 @@ public class RockBump : Magic
             return;
         }
         int damage_dealt = 0;
+        float temp = 0.0f;
         // DO BASE DAMAGE MODIFACTION FROM PLAYER STATS HERE!!!
 
         if (enemies.Count == 1)
@@ -71,48 +73,50 @@ public class RockBump : Magic
                 if (is_weakness(enemies[0]))
                 {
                     //damage_dealt = ((base_damage / 2) + (base_damage + (base_damage / 2)));
-                    for (int i = 0; i < hits; i++) 
-                    {
-                        damage_dealt += base_damage + (base_damage / 2) + (base_damage / 4);
-                        enemies[0].hp -= base_damage + (base_damage / 2) + (base_damage / 4);
-                        Debug.Log($"Combo: {i+1} Hits for {base_damage + (base_damage / 2) + (base_damage / 4)}HP damage!");
-                    }
+                    temp = (float)(this.base_damage) * ((player.is_tech) ? player.tech_ring_strike_bonus : player.normal_ring_strike_bonus) * player.weakness_bonus;
+                    damage_dealt = Convert.ToInt32(temp * player.s_atk_buff);
                 }
                 else
                 {
-                    for (int i = 0; i < hits; i++)
-                    {
-                        damage_dealt += base_damage + (base_damage / 2);
-                        enemies[0].hp -= base_damage + (base_damage / 2);
-                        Debug.Log($"Combo: {i + 1} Hits for {base_damage + (base_damage / 3)}HP damage!");
-                    }
+                    temp = (float)(this.base_damage) * ((player.is_tech) ? player.tech_ring_strike_bonus : player.normal_ring_strike_bonus);
+                    damage_dealt = Convert.ToInt32(temp * player.s_atk_buff);
                 }
             }
             else
             {
                 if (is_weakness(enemies[0]))
                 {
-                    for (int i = 0; i < hits; i++)
-                    {
-                        damage_dealt += base_damage + (base_damage / 2);
-                        enemies[0].hp -= base_damage + (base_damage / 2);
-                        Debug.Log($"Combo: {i + 1} Hits for {base_damage + (base_damage / 2)}HP damage!");
-                    }
+                    temp = (float)(this.base_damage) * player.weakness_bonus;
+                    damage_dealt = Convert.ToInt32(temp * player.s_atk_buff);
                 }
                 else
                 {
-                    for (int i = 0; i < hits; i++)
-                    {
-                        damage_dealt += base_damage;
-                        enemies[0].hp -= base_damage;
-                        Debug.Log($"Combo: {i + 1} Hits for {base_damage}HP damage!");
-                    }
+                    temp = (float)(this.base_damage);
+                    damage_dealt = Convert.ToInt32(temp * player.s_atk_buff);
+                    //damage_dealt += this.base_damage;
                 }
             }
+
+            if (player.ring_equips.Contains(player.charge_piece))
+            {
+                float multiplier = (player.is_tech) ? 0.8f : 0.9f;
+                multiplier += (player.is_tech) ? (float)(player.charges) * 0.02f : (float)(player.charges) * 0.01f;
+                temp = (float)(damage_dealt) * multiplier;
+                Debug.Log($"Charge Multiplier is {multiplier}");
+                damage_dealt = Convert.ToInt32(temp * player.s_atk_buff);
+            }
+
             // APPLY ENEMY STATS HERE
             //enemies[0].s_def
 
-            Debug.Log($"MAGIC ROCK BUMP: {player.name} dealt a total {damage_dealt}HP of damage to {enemies[0].name}!");
+            // DO THE ATTACK
+            for (int i = 0; i < hits; i++)
+            {
+                enemies[0].hp -= damage_dealt;
+                Debug.Log($"Combo: {i + 1} Hits for {damage_dealt}HP damage!");
+            }
+
+            Debug.Log($"MAGIC ROCK BUMP: {player.name} dealt a total {damage_dealt*hits}HP of damage to {enemies[0].name}!");
             //enemies[0].hp -= damage_dealt;
             if (player.mp - this.cost <= 0)
             {

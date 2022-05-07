@@ -15,11 +15,16 @@ public enum PlayerBattleState
 public class PlayerBattle : MonoBehaviour
 {
 
-    public int hp, mp, sp, place_holder_dmg; // Health, Magic, Sanity
-    public int p_atk, p_def, s_atk, s_def, agi;
+    public int hp, mp, sp, str, vit, agi, intelligence, pow, luc, place_holder_dmg; // Health, Magic, Sanity
+    public int p_atk, p_def, s_atk, s_def;
     public float stock; // Stock Gauge
     public string name;
     public int MAX_HP, MAX_MP, MAX_SP;
+
+    public float p_atk_buff, p_def_buff, s_atk_buff, s_def_buff;
+    public int p_atk_buff_count, s_atk_buff_count, energy_charge_count;
+
+
 
     // Player's Standard Ring
     //public JudgmentRing jr;
@@ -28,7 +33,7 @@ public class PlayerBattle : MonoBehaviour
     public GameObject jr_go;
     public int strikes, hits, steps, modulates, charges, misses;
     public int ring_pieces;
-    public bool ring_finished, mode_db, is_done, is_miss, is_dead, is_winner, is_tech;
+    public bool ring_finished, mode_db, is_done, is_miss, is_dead, is_winner, is_loser, is_tech, is_first_strike, is_first_hit, has_buffs;
 
     public AudioSource[] sounds;
     public Bag bag;
@@ -39,11 +44,19 @@ public class PlayerBattle : MonoBehaviour
     public Magic red_nova;
     public Magic rock_bump;
     public Magic hail_dust;
+    public Magic cure;
+    public Magic rage; 
+    public Magic surge;
+    public Magic energy_charge;
     public List<Magic> magic_list;
     public Equip charge_piece;
     public List<Equip> ring_equips;
     public PlayerBattleState state;
     //JudgmentRing jr;
+
+    public float normal_ring_strike_bonus;
+    public float tech_ring_strike_bonus;
+    public float weakness_bonus;
 
     public PlayerBattle()
     {
@@ -94,12 +107,33 @@ public class PlayerBattle : MonoBehaviour
             red_nova = new RedNova();
             rock_bump = new RockBump();
             hail_dust = new HailDust();
+            cure = new Cure();
+            rage = new Rage();
+            surge = new Surge();
+            energy_charge = new EnergyCharge();
             this.magic_list.Add(red_nova);
             this.magic_list.Add(rock_bump);
             this.magic_list.Add(hail_dust);
+            this.magic_list.Add(cure);
+            this.magic_list.Add(rage);
+            this.magic_list.Add(surge);
+            this.magic_list.Add(energy_charge);
             this.type = MagicType.NONE;
             this.ring_equips = new List<Equip>();
             this.charge_piece = new ChargePiece();
+            this.is_first_hit = false;
+            this.is_first_strike = false;
+            this.normal_ring_strike_bonus = 1.2f;
+            this.tech_ring_strike_bonus = 1.44f;
+            this.weakness_bonus = 1.2f;
+            this.p_atk_buff = 1.0f;
+            this.p_def_buff = 1.0f;
+            this.s_atk_buff = 1.0f;
+            this.s_def_buff = 1.0f;
+            this.p_atk_buff_count = 0;
+            this.s_atk_buff_count = 0;
+            this.energy_charge_count = 0;
+            this.has_buffs = false;
             this.state = PlayerBattleState.WAITING_FOR_PLAYER_INPUT;
         }
     }
@@ -117,6 +151,9 @@ public class PlayerBattle : MonoBehaviour
                     this.hits = dial.hit_count;
                     this.strikes = dial.strike_count;
                     this.misses = dial.miss_count;
+                    this.is_first_hit = dial.first_hit;
+                    this.is_first_strike = dial.first_strike;
+                    //Debug.Log($"FH:{this.is_first_hit} || FS:{this.is_first_strike}");
                     if (hits >= ring_pieces || strikes >= ring_pieces || hits + strikes >= ring_pieces || misses >= 1)
                     {
                         //StartCoroutine(RemoveDial());
@@ -184,6 +221,8 @@ public class PlayerBattle : MonoBehaviour
             this.modulates = 0;
             this.charges = 0;
             this.misses = 0;
+            this.is_first_hit = false;
+            this.is_first_strike = false;
             this.is_miss = false;
         }
         if (this.is_winner) 
@@ -191,6 +230,7 @@ public class PlayerBattle : MonoBehaviour
             sounds[0].Play();
             this.is_winner = false;
         }
+        //if(this.is)
         // catch any fallthrough misses
         /*if (this.jr_go != null && this.dial == null) 
         {
@@ -268,15 +308,19 @@ public class PlayerBattle : MonoBehaviour
 
 
 
-    public void StandardAttack(EnemyBattle e)//, Action onAttackComplete) 
+    public void StandardAttack(EnemyBattle enemy)//, Action onAttackComplete) 
     {
+        // THELCC HAS GRACIOUSLY GIVEN ME THE DOWNLOAD
+        // EACH EXTRA STRIKE IS * 1.1f
+
         if (this.misses >= 1) 
         {
-            Debug.Log($"{this.name} deals no damage to {e.name}!");
+            Debug.Log($"{this.name} deals no damage to {enemy.name}!");
             return;
         }
-        int damage_dealt = 0; // = place_holder_dmg;
-
+        int damage_dealt = place_holder_dmg;
+        float temp = 0.0f;
+        float extra_hit_bonus = (float)(this.place_holder_dmg) * 0.1f;
         // 1 HIT RING IS THE LEAST COMMITMENT AND GIVES THE LEAST RISK VS REWARD. RING FOR SPEEDRUNNERS
         // 2 HIT RING IS MEDIUM COMMITMENT. RING FOR INSANE PEOPLE
         // 3 HIT RING HIT AREAS DO VERY LITTLE BUT STRIKES DO A LOT OF DAMAGE. RING FOR SUPER PLAYERS
@@ -284,36 +328,92 @@ public class PlayerBattle : MonoBehaviour
         {
             if (this.ring_pieces == 1)
             {
-                damage_dealt +=  place_holder_dmg * this.hits;
+                temp += (float)(this.place_holder_dmg) * this.p_atk_buff;
+                damage_dealt = Convert.ToInt32(temp);
+                //damage_dealt +=  place_holder_dmg;
                 //damage_dealt += damage_dealt * this.hits;
             }
             else if (this.ring_pieces == 2)
             {
-                damage_dealt += (place_holder_dmg / 2) * this.hits;
+                //damage_dealt += place_holder_dmg;
+                if (this.is_first_hit && !this.is_first_strike)
+                {
+                    temp += (float)(damage_dealt);
+                }
+                if (hits - 1 >= 0)
+                {
+                    for (int i = 0; i < hits - 1; i++)
+                    {
+                        temp += extra_hit_bonus;
+                    }
+                }
+                damage_dealt = Convert.ToInt32(temp * this.p_atk_buff);
+                //damage_dealt += (place_holder_dmg / 2) * this.hits;
             }
+            // ALL CASES CAN BE HANDLED WITH CODE ABOVE CONSIDER REMOVING MORE HIT AREA CODE
             else if (this.ring_pieces == 3)
             {
-                damage_dealt += (place_holder_dmg / 4) * this.hits;
+                if (this.is_first_hit && !this.is_first_strike)
+                { 
+                    temp += (float)(damage_dealt);
+                }
+                if (hits - 1 >= 0)
+                {
+                    for (int i = 0; i < hits - 1; i++)
+                    {
+                        temp += extra_hit_bonus;
+                    }
+                }
+                damage_dealt = Convert.ToInt32(temp * this.p_atk_buff);
+                //damage_dealt += (place_holder_dmg / 4) * this.hits;
             }
         }
         if (this.strikes > 0)
         {
             if (this.ring_pieces == 1)
             {
-                damage_dealt = ((place_holder_dmg / 4) + place_holder_dmg) * this.strikes;
+                temp += (float)(this.place_holder_dmg) * ((this.is_tech) ? this.tech_ring_strike_bonus : this.normal_ring_strike_bonus);
+                damage_dealt += Convert.ToInt32(temp * this.p_atk_buff);
+                //damage_dealt = ((place_holder_dmg / 4) + place_holder_dmg) * this.strikes;
             }
             else if (this.ring_pieces == 2)
             {
-                damage_dealt += ((place_holder_dmg / 6) + place_holder_dmg / 2) * this.strikes;
+                if (this.is_first_strike && !this.is_first_hit)
+                {
+                    temp += (float)(this.place_holder_dmg) * ((this.is_tech) ? this.tech_ring_strike_bonus : this.normal_ring_strike_bonus);
+                }
+                if (strikes - 1 >= 0)
+                {
+                    for (int i = 0; i < strikes - 1; i++)
+                    {
+                        temp += extra_hit_bonus;
+                    }
+                }
+
+                damage_dealt = Convert.ToInt32(temp * this.p_atk_buff);
+                //damage_dealt += ((place_holder_dmg / 6) + place_holder_dmg / 2) * this.strikes;
             }
             else if (this.ring_pieces == 3) 
             {
-                damage_dealt += ((place_holder_dmg / 8) + place_holder_dmg/2) * this.strikes;
+                if (this.is_first_strike && !this.is_first_hit)
+                {
+                    temp += (float)(this.place_holder_dmg) * ((this.is_tech) ? this.tech_ring_strike_bonus : this.normal_ring_strike_bonus);
+                }
+                if (strikes-1 >= 0) 
+                {
+                    for (int i = 0; i < strikes - 1; i++) 
+                    {
+                        temp += extra_hit_bonus * ((this.is_tech) ? this.tech_ring_strike_bonus : this.normal_ring_strike_bonus);
+                    }
+                }
+
+                damage_dealt = Convert.ToInt32(temp * this.p_atk_buff);
+                //damage_dealt += ((place_holder_dmg / 8) + place_holder_dmg/2) * this.strikes;
             }
         }
-        Debug.Log($"{this.name} deals {damage_dealt} damage to {e.name}!");
-        e.hp -= damage_dealt;
-
+        Debug.Log($"{this.name} deals {damage_dealt} damage to {enemy.name}!");
+        enemy.hp -= damage_dealt;
+        this.HandlePlayerBuffs();
     }
 
     public void HandleHealingItem(Item item) 
@@ -322,6 +422,7 @@ public class PlayerBattle : MonoBehaviour
         {
             Debug.Log($"{this.name} missed and wasn't able to heal!");
             this.is_miss = true;
+            this.HandlePlayerBuffs();
             return;
         }
         if (this.strikes >= 1)
@@ -332,6 +433,7 @@ public class PlayerBattle : MonoBehaviour
         {
             item.UseItem(this, false);
         }
+        this.HandlePlayerBuffs();
     }
 
     public void HandleMagicAttack(Magic magic, List<EnemyBattle> enemies) 
@@ -340,6 +442,7 @@ public class PlayerBattle : MonoBehaviour
         {
             Debug.Log($"{this.name} missed and wasn't able to cast {magic.name}!");
             this.is_miss = true;
+            this.HandlePlayerBuffs();
             return;
         }
         if (this.strikes >= 1)
@@ -348,7 +451,57 @@ public class PlayerBattle : MonoBehaviour
         }
         else 
         {
-            magic.UseMagic(this, enemies, true);
+            magic.UseMagic(this, enemies, false);
+        }
+        this.HandlePlayerBuffs();
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    //                               HANDLE PLAYER STATE
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+
+    // For our state handling that only the player needs to see we
+    // will keep member functions private
+    //
+    private void HandlePlayerBuffs() 
+    {
+        if (this.has_buffs)
+        {
+            // HANDLE PHYSICAL ATTACK BUFFS
+            if (this.p_atk_buff_count > 0)
+            {
+                this.p_atk_buff_count--;
+                if (this.p_atk_buff_count == 0)
+                {
+                    Debug.Log($"{this.name}'s Rage ran out! Their attack power returns to normal!");
+                    this.p_atk_buff = 1.0f;
+
+                }
+                else
+                {
+                    Debug.Log($"Turns left with Rage: {this.p_atk_buff_count}");
+                }
+            }
+            // HANDLE SINGLE TURN PHYSICAL ATTACK BUFFS
+            // HANDLE MAGIC ATTACK BUFFS
+            if (this.s_atk_buff_count > 0)
+            {
+                this.s_atk_buff_count--;
+                if (this.s_atk_buff_count == 0)
+                {
+                    Debug.Log($"{this.name}'s Surge ran out! Their special attack power returns to normal!");
+                    this.s_atk_buff = 1.0f;
+                }
+                else
+                {
+                    Debug.Log($"Turns left with Surge: {this.s_atk_buff_count}");
+                }
+            }
+            if (this.p_atk_buff == 1.0f && this.p_def_buff == 1.0f && this.s_atk_buff == 1.0f && this.s_def_buff == 1.0f)
+            {
+                this.has_buffs = false;
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 // Base Class for Magic Skills
 //
@@ -17,6 +18,7 @@ public abstract class Magic
     public virtual MagicType type { get; set; }
     public virtual int base_damage { get; set; }
     public virtual int cost { get; set; }
+    public virtual int ring_index { get; set; }
     // Maybe virtual animation reference here later???
 
     public abstract bool is_weakness(EnemyBattle enemy);

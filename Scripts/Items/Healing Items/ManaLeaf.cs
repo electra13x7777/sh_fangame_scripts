@@ -40,7 +40,7 @@ public class ManaLeaf : Item
         //this.sound.Play();
         heal_mp(player, is_strike);
         //heal()
-
+        Bag.RemoveFromBag(this);
         return;
         //this.jr_go = player.spawn_item_ring()
     }

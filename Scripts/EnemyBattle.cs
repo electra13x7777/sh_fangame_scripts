@@ -80,11 +80,11 @@ public class EnemyBattle : MonoBehaviour
 
     public void delayed_attack_pattern(List<PlayerBattle> players) 
     {
-        if (this.hp >= 65)
+        if (this.hp >= 80)
         {
             Attack(players[0]);
         }
-        else if (this.hp < 65 && this.hp >= 30)
+        else if (this.hp < 80 && this.hp >= 60)
         {
             //Random rand;
             int atk = Random.Range(0, 2);
@@ -99,9 +99,9 @@ public class EnemyBattle : MonoBehaviour
                     break;
             }
         }
-        else 
+        else if(this.hp <60)
         {
-            this.magic_list[1].EnemyMagic(this, players);
+            this.magic_list[0].EnemyMagic(this, players);
         }
     }
 }

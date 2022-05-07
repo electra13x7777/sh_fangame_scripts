@@ -10,7 +10,10 @@ public enum MagicType
     WIND,
     EARTH,
     DARK,
-    LIGHT
+    LIGHT,
+    // NON ELEMENTAL MAGIC
+    HEALING,
+    BUFF
 }
 
 public enum ItemType
@@ -51,7 +54,6 @@ public class Bag : MonoBehaviour
         get; private set;
     }
 
-
     public MagicType magic_type;
     public ItemType item_type;
     public EquipType equip_type;
@@ -74,6 +76,7 @@ public class Bag : MonoBehaviour
         Item mana_leaf = new ManaLeaf();
         Item pure_leaf = new PureLeaf();
         //medi_leaf.jr_fab = heal_ring.gameObject;
+        AppendToBag(medi_leaf);
         AppendToBag(medi_leaf);
         AppendToBag(mana_leaf);
         AppendToBag(pure_leaf);
@@ -109,9 +112,9 @@ public class Bag : MonoBehaviour
         */
     }
 
-    // AppendToBag
-    //  Checks if item is already in bag
-    //
+    // Member Funcntion: AppendToBag
+    // Checks if item is already in bag
+    // adds 1 to the value if true, sets value to 1 if false
     public static void AppendToBag(Item item) 
     {
         if (CheckIfInBag(item))
@@ -122,6 +125,7 @@ public class Bag : MonoBehaviour
         {
             Instance.items[item] = 1; // make a new entry in dictionary and init its count
         }
+        //(CheckIfInBag(item)) ? Instanche.items[item] += 1 : Instance.items[item] = 1;
     }
 
     // RemoveFromBag
@@ -158,5 +162,4 @@ public class Bag : MonoBehaviour
     {
         return; //if()
     }
-
 }

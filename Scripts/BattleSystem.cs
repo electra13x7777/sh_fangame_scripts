@@ -33,20 +33,24 @@ public class BattleSystem : MonoBehaviour
     public GameObject p_fab;
     public GameObject e_fab;
     public GameObject jr_fab;
+    public GameObject cfb_fab;
     // get the positions to spawn them in at
 
     public Transform p_loc_init;
     public Transform e_loc_init;
     public Transform jr_loc_init;
+    public Transform cfb_loc_init;
 
     // jr game object
     public GameObject jr_go;
 
     public bool manual_ring_del, auto_ring_del;
-    /*public Text p_name;
+    
+    public Text p_name;
     public Text p_hp;
     public Text p_mp;
-    public Text p_sp;*/
+    public Text p_sp;
+    
     //[RequireComponent(typeof(PlayerHUD))]
     public PlayerHUD p_hud;
     public AudioSource[] sounds;
@@ -89,7 +93,7 @@ public class BattleSystem : MonoBehaviour
 
             //StartCoroutine(prepare_battle());
         }
-        this.item_num = 2;
+        this.item_num = 0;
         this.mag_num = 0;
         this.jr_go = null;
         //prepare_battle();
@@ -108,7 +112,6 @@ public class BattleSystem : MonoBehaviour
         else 
         {
             state = BattleState.ENEMY_TURN;
-
         }
     }
 
@@ -120,6 +123,12 @@ public class BattleSystem : MonoBehaviour
         switch (state)
         {
             case BattleState.PLAYER_TURN:
+                p_name.text = $"{player.name}";
+                p_hp.text = $"{player.hp}HP/{player.MAX_HP}HP";
+                p_mp.text = $"{player.mp}MP/{player.MAX_MP}MP";
+                p_sp.text = $"{player.sp}SP/{player.MAX_SP}SP";
+                // TODO: HANDLE BERSERK HERE WHEN SP REACHES ZERO
+
 
                 // HANDLE PLAYER INPUT HERE
                 // Here we only want to take in the player input then redirect them to a ring or possibly something else
@@ -133,13 +142,25 @@ public class BattleSystem : MonoBehaviour
                 {
                     if (player.mp >= player.magic_list[mag_num].cost)
                     {
-                        if (player.ring_equips.Contains(player.charge_piece)) 
+                        // HANDLE HEALING MAGIC
+                        if (player.magic_list[mag_num].type == MagicType.HEALING)
                         {
-                            this.jr_go = player.spawn_magic_ring(bag.rings_list[8]);
+                            this.jr_go = player.spawn_magic_ring(bag.rings_list[player.magic_list[mag_num].ring_index]);
                         }
-                        else 
-                        { 
-                            this.jr_go = player.spawn_magic_ring(bag.rings_list[7]);
+                        // HANDLE BUFF MAGIC
+                        else if (player.magic_list[mag_num].type == MagicType.BUFF) 
+                        {
+                            this.jr_go = player.spawn_magic_ring(bag.rings_list[player.magic_list[mag_num].ring_index]);
+                        }
+                        // HANDLE CHARGE RING EQUIP
+                        else if (player.ring_equips.Contains(player.charge_piece))
+                        {
+                            this.jr_go = player.spawn_magic_ring(bag.rings_list[player.magic_list[mag_num].ring_index + 1]);
+                        }
+                        // HANDLE NON CHARGE MAGIC ATTACK
+                        else
+                        {
+                            this.jr_go = player.spawn_magic_ring(bag.rings_list[player.magic_list[mag_num].ring_index]);
                         }
                         p_state = PlayerState.MAGIC_ATTACK;
                     }
@@ -149,7 +170,7 @@ public class BattleSystem : MonoBehaviour
                     }
                 }
 
-                if (Input.GetKeyDown(KeyCode.D) && this.jr_go == null && bag.items[bag.item_list[item_num]] >= 0)
+                if (Input.GetKeyDown(KeyCode.D) && this.jr_go == null && bag.items.ContainsKey(bag.item_list[item_num]))
                 {
                     bag.item_list[item_num].jr_fab = this.jr_fab;
                     foreach(Item i in bag.items.Keys)
@@ -158,7 +179,7 @@ public class BattleSystem : MonoBehaviour
                         Debug.Log($"bag.item_list: {i.name}");
 
                     Debug.Log($"{bag.item_list[item_num].name}");
-                    Debug.Log($"{bag.item_list[item_num].jr_fab}");
+                    //Debug.Log($"{bag.item_list[item_num].jr_fab}");
                     this.jr_go = player.spawn_item_ring(bag.rings_list[9]);
                     //healing = true;
                     //p_state = PlayerState.ITEM;
@@ -172,12 +193,28 @@ public class BattleSystem : MonoBehaviour
                     {
                         item_num = 0;
                         Debug.Log($"ITEM INDEX: {item_num}");
-                        Debug.Log($"Current Item: {bag.item_list[item_num].name}");
+                        try
+                        {
+                            Debug.Log($"Current Item: {bag.item_list[item_num].name}");
+                            Debug.Log($"Amt: {bag.items[bag.item_list[item_num]]}");
+                        }
+                        catch (KeyNotFoundException e)
+                        {
+                            
+                        }
                     }
                     else
                     {
                         Debug.Log($"ITEM INDEX: {++item_num}");
-                        Debug.Log($"Current Item: {bag.item_list[item_num].name}");
+                        try
+                        {
+                            Debug.Log($"Current Item: {bag.item_list[item_num].name}");
+                            Debug.Log($"Amt: {bag.items[bag.item_list[item_num]]}");
+                        }
+                        catch (KeyNotFoundException e) 
+                        {
+                            
+                        }
                     }
                     
                 }
@@ -185,7 +222,7 @@ public class BattleSystem : MonoBehaviour
                 if (Input.GetKeyDown(KeyCode.X))
                 {
                     bag.sounds[3].Play();
-                    if (mag_num + 1 == 3)
+                    if (mag_num + 1 == player.magic_list.Count)
                     {
                         mag_num = 0;
                         Debug.Log($"ITEM INDEX: {mag_num}");
@@ -202,6 +239,7 @@ public class BattleSystem : MonoBehaviour
 
                 if (Input.GetKeyDown(KeyCode.V)) 
                 {
+                    bag.sounds[3].Play();
                     if (!player.ring_equips.Contains(player.charge_piece))
                     {
                         player.ring_equips.Add(player.charge_piece);
@@ -230,6 +268,20 @@ public class BattleSystem : MonoBehaviour
                         }
                         break;
                     case PlayerState.MAGIC_ATTACK://player.magic_list[0].ring_pieces
+                        if (player.magic_list[mag_num].type == MagicType.BUFF)
+                        {
+                            if (player.steps >= 1 && player.modulates >= 1 || player.steps >= 1 && player.strikes >= 1 || player.misses >= 1)
+                            {
+                                p_state = PlayerState.MAGIC_ATTACK_DONE;
+                            }
+                        }
+                        if (player.magic_list[mag_num].type == MagicType.HEALING) 
+                        {
+                            if (player.hits >= 1 || player.strikes >= 1 || player.misses >= 1)
+                            {
+                                p_state = PlayerState.MAGIC_ATTACK_DONE;
+                            }
+                        }
                         if (player.ring_equips.Contains(player.charge_piece)) 
                         {
                             if (player.charges >= 1 && player.modulates >= 1 || player.charges >= 1 && player.strikes >= 1 || player.misses >= 1) 
@@ -307,6 +359,7 @@ public class BattleSystem : MonoBehaviour
                 {
                     Debug.Log("PLAYER LOSES");
                     state = BattleState.LOSE;
+                    break;
                 }
                 if (!player.is_dead)
                 {
@@ -322,9 +375,22 @@ public class BattleSystem : MonoBehaviour
                 sounds[0].Stop();
                 sounds[1].Play();
                 player.is_winner = true;
+                //if(enemy.gameObject != null)
+                    //Destroy(enemy.gameObject);
                 state = BattleState.DONE;
                 break;
             case BattleState.LOSE:
+                p_hp.text = $"0HP/{player.MAX_HP}HP";
+                sounds[0].Stop();
+                sounds[2].Play();
+                player.is_loser = true;
+                if (player.is_loser)
+                {
+                    sounds[3].Play();
+                }
+                Destroy(player.gameObject);
+                Instantiate(cfb_fab, cfb_loc_init);
+                state = BattleState.DONE;
                 break;
             case BattleState.DONE:
                 break;
@@ -351,6 +417,7 @@ public class BattleSystem : MonoBehaviour
         return enemy;
     }
     
+
     IEnumerator RemoveRing() 
     {
         Debug.Log("BATTLE SYSTEM: Removing Ring From Scene");

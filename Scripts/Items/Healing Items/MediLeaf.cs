@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class MediLeaf : Item
 {
@@ -28,9 +29,14 @@ public class MediLeaf : Item
 
     public void heal_hp(PlayerBattle player, bool is_strike) 
     {
+        float temp = 0.0f;
         this.base_heal_amt = 25;
-        if (is_strike)
-            this.base_heal_amt += this.base_heal_amt/4;
+        if (is_strike) 
+        {
+            temp = (float)(this.base_heal_amt) * ((player.is_tech) ? player.tech_ring_strike_bonus : player.normal_ring_strike_bonus);
+            base_heal_amt = Convert.ToInt32(temp);
+        }
+            //this.base_heal_amt += this.base_heal_amt/4;
 
         if (player.hp + base_heal_amt >= player.MAX_HP)
         {
@@ -48,6 +54,7 @@ public class MediLeaf : Item
     public override void UseItem(PlayerBattle player, bool is_strike)
     {
         heal_hp(player, is_strike);
+        Bag.RemoveFromBag(this);
         return;
     }
 }
