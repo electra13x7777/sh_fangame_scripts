@@ -21,8 +21,8 @@ public class PlayerBattle : MonoBehaviour
     public string name;
     public int MAX_HP, MAX_MP, MAX_SP;
 
-    public float p_atk_buff, p_def_buff, s_atk_buff, s_def_buff;
-    public int p_atk_buff_count, s_atk_buff_count, energy_charge_count;
+    public float p_atk_buff, p_def_buff, s_atk_buff, s_def_buff, energy_charge_val, entrance_val;
+    public int p_atk_buff_count, p_def_buff_count, s_atk_buff_count, s_def_buff_count, energy_charge_count, entrance_count;
 
 
 
@@ -47,7 +47,10 @@ public class PlayerBattle : MonoBehaviour
     public Magic cure;
     public Magic rage; 
     public Magic surge;
+    public Magic shield;
+    public Magic barrier;
     public Magic energy_charge;
+    public Magic entrance;
     public List<Magic> magic_list;
     public Equip charge_piece;
     public List<Equip> ring_equips;
@@ -110,14 +113,20 @@ public class PlayerBattle : MonoBehaviour
             cure = new Cure();
             rage = new Rage();
             surge = new Surge();
+            shield = new Shield(); // need to implement def related stat handling
+            barrier = new Barrier();
             energy_charge = new EnergyCharge();
+            entrance = new Entrance();
             this.magic_list.Add(red_nova);
             this.magic_list.Add(rock_bump);
             this.magic_list.Add(hail_dust);
             this.magic_list.Add(cure);
             this.magic_list.Add(rage);
             this.magic_list.Add(surge);
+            this.magic_list.Add(shield);
+            this.magic_list.Add(barrier);
             this.magic_list.Add(energy_charge);
+            this.magic_list.Add(entrance);
             this.type = MagicType.NONE;
             this.ring_equips = new List<Equip>();
             this.charge_piece = new ChargePiece();
@@ -130,9 +139,12 @@ public class PlayerBattle : MonoBehaviour
             this.p_def_buff = 1.0f;
             this.s_atk_buff = 1.0f;
             this.s_def_buff = 1.0f;
+            this.energy_charge_val = 0;
+            this.entrance_val = 0;
             this.p_atk_buff_count = 0;
             this.s_atk_buff_count = 0;
             this.energy_charge_count = 0;
+            this.entrance_count = 0;
             this.has_buffs = false;
             this.state = PlayerBattleState.WAITING_FOR_PLAYER_INPUT;
         }
@@ -188,9 +200,10 @@ public class PlayerBattle : MonoBehaviour
                     }
                     this.steps = dial.step_count;
                     this.modulates = dial.modulate_count;
+                    this.hits = dial.hit_count;
                     this.strikes = dial.strike_count;
                     this.misses = dial.miss_count;
-                    if (steps >= 1 && modulates >= 1 || steps >= 1 && strikes >= 1 || misses >= 1)
+                    if (steps >= 1 && modulates >= 1 || steps >= 1 && strikes >= 1 || hits >= 1 || misses >= 1)
                     {
                         //StartCoroutine(RemoveDial());
                         Destroy(dial.gameObject);
@@ -250,6 +263,7 @@ public class PlayerBattle : MonoBehaviour
         return transform.position;
     }
 
+    // UNUSED PLEASE CONSIDER REMOVING
     public void GetRing(GameObject jr_fab, Transform jr_loc_init, GameObject jr_go)
     {
         this.jr_fab = jr_fab;
@@ -456,6 +470,13 @@ public class PlayerBattle : MonoBehaviour
         this.HandlePlayerBuffs();
     }
 
+    // take damage prototyping
+    public void HandlePlayerDamage() 
+    {
+        return;
+    }
+
+
     ///////////////////////////////////////////////////////////////////////////////////////////
     //                               HANDLE PLAYER STATE
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -474,7 +495,7 @@ public class PlayerBattle : MonoBehaviour
                 this.p_atk_buff_count--;
                 if (this.p_atk_buff_count == 0)
                 {
-                    Debug.Log($"{this.name}'s Rage ran out! Their attack power returns to normal!");
+                    Debug.Log($"{this.name}'s Rage wore off! Their attack power returns to normal!");
                     this.p_atk_buff = 1.0f;
 
                 }
@@ -483,14 +504,50 @@ public class PlayerBattle : MonoBehaviour
                     Debug.Log($"Turns left with Rage: {this.p_atk_buff_count}");
                 }
             }
+
             // HANDLE SINGLE TURN PHYSICAL ATTACK BUFFS
-            // HANDLE MAGIC ATTACK BUFFS
+            if (this.energy_charge_count > 0) 
+            {
+                this.energy_charge_count--;
+                if (this.energy_charge_count == 0)
+                {
+                    Debug.Log($"{this.name}'s Energy Charge wore off! Their attack power returns to normal!");
+                    if (this.p_atk_buff_count > 0)
+                    {
+                        this.p_atk_buff -= this.energy_charge_val;
+                    }
+                    else
+                    {
+                        this.p_atk_buff = 1.0f;
+                    }
+                }
+                this.energy_charge_val = 0;
+            }
+
+            // HANDLE PHYSICAL DEFENSE BUFFS
+            if (this.p_def_buff_count > 0)
+            {
+                this.p_def_buff_count--;
+                if (this.p_def_buff_count == 0)
+                {
+                    Debug.Log($"{this.name}'s Shield wore off! Their defense returns to normal!");
+                    this.p_def_buff = 1.0f;
+
+                }
+                else
+                {
+                    Debug.Log($"Turns left with Shield: {this.p_def_buff_count}");
+                }
+            }
+
+
+            // HANDLE SPECIAL ATTACK BUFFS
             if (this.s_atk_buff_count > 0)
             {
                 this.s_atk_buff_count--;
                 if (this.s_atk_buff_count == 0)
                 {
-                    Debug.Log($"{this.name}'s Surge ran out! Their special attack power returns to normal!");
+                    Debug.Log($"{this.name}'s Surge wore off! Their special attack power returns to normal!");
                     this.s_atk_buff = 1.0f;
                 }
                 else
@@ -498,6 +555,43 @@ public class PlayerBattle : MonoBehaviour
                     Debug.Log($"Turns left with Surge: {this.s_atk_buff_count}");
                 }
             }
+
+            // HANDLE SINGLE TURN SPECIAL ATTACK BUFFS
+            if (this.entrance_count > 0)
+            {
+                this.entrance_count--;
+                if (this.entrance_count == 0)
+                {
+                    Debug.Log($"{this.name}'s Entrance wore off! Their special attack power returns to normal!");
+                    if (this.s_atk_buff_count > 0)
+                    {
+                        this.s_atk_buff -= this.entrance_val;
+                    }
+                    else
+                    {
+                        this.s_atk_buff = 1.0f;
+                    }
+                }
+                this.entrance_val = 0;
+            }
+
+            // HANDLE SPECIAL DEFENSE BUFFS
+            if (this.s_def_buff_count > 0)
+            {
+                this.s_def_buff_count--;
+                if (this.s_def_buff_count == 0)
+                {
+                    Debug.Log($"{this.name}'s Barrier wore off! Their special defense returns to normal!");
+                    this.s_def_buff = 1.0f;
+
+                }
+                else
+                {
+                    Debug.Log($"Turns left with Barrier: {this.s_def_buff_count}");
+                }
+            }
+
+            // HANDLE PLAYER WITH NO BUFFS
             if (this.p_atk_buff == 1.0f && this.p_def_buff == 1.0f && this.s_atk_buff == 1.0f && this.s_def_buff == 1.0f)
             {
                 this.has_buffs = false;

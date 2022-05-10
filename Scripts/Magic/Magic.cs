@@ -10,7 +10,7 @@ using System;
 
 public abstract class Magic
 {
-    public Bag bag;
+    //public Bag bag;
     public virtual string name { get; set; }
     public virtual string description { get; set; }
     public virtual int level { get; set; } // Tiering for magic

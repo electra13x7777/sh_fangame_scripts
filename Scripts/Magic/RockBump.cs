@@ -7,7 +7,7 @@ public class RockBump : Magic
 {
     public Bag bag;
     public override string name { get { return "Rock Bump"; } }
-    public override string description { get { return string.Empty; } }
+    public override string description { get { return "Medium range, 5 hit, High-angle."; } }
     public override int level { get { return 1; } }
     public override int ring_pieces { get { return 2; } }
     public override MagicType type { get { return MagicType.EARTH; } }

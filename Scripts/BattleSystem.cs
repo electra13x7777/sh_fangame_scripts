@@ -50,6 +50,10 @@ public class BattleSystem : MonoBehaviour
     public Text p_hp;
     public Text p_mp;
     public Text p_sp;
+    public Text p_cur_item;
+    public Text p_cur_magic;
+    public Text e_info;
+    public Text dbug_log;
     
     //[RequireComponent(typeof(PlayerHUD))]
     public PlayerHUD p_hud;
@@ -66,9 +70,12 @@ public class BattleSystem : MonoBehaviour
     public List<EnemyBattle> enemies;
     public List<PlayerBattle> players;
     public int item_num, mag_num;
-    
+
+    public string output = "";
+    public string stack = "";
+
     // SINGLETON
-    
+
     private static BattleSystem Instance;
     public static BattleSystem GetInstance
     {
@@ -117,6 +124,7 @@ public class BattleSystem : MonoBehaviour
 
     void Update()
     {
+        dbug_log.text = $"{output}";
         //bool standard_done = false;
         //bool healing = false;
         //bool healed = false;
@@ -127,17 +135,21 @@ public class BattleSystem : MonoBehaviour
                 p_hp.text = $"{player.hp}HP/{player.MAX_HP}HP";
                 p_mp.text = $"{player.mp}MP/{player.MAX_MP}MP";
                 p_sp.text = $"{player.sp}SP/{player.MAX_SP}SP";
+                e_info.text = $"{enemy.name} {enemy.hp}HP";
                 // TODO: HANDLE BERSERK HERE WHEN SP REACHES ZERO
 
 
                 // HANDLE PLAYER INPUT HERE
                 // Here we only want to take in the player input then redirect them to a ring or possibly something else
+                
+                // STANDARD ATTACK
                 if (Input.GetKeyDown(KeyCode.A) && this.jr_go == null)
                 {
                     this.jr_go = player.spawn_standard_ring(bag.rings_list[player.ring_num]);
                     p_state = PlayerState.STANDARD;
                 }
 
+                // MAGIC
                 if (Input.GetKeyDown(KeyCode.C) && this.jr_go == null) 
                 {
                     if (player.mp >= player.magic_list[mag_num].cost)
@@ -170,6 +182,7 @@ public class BattleSystem : MonoBehaviour
                     }
                 }
 
+                // ITEM
                 if (Input.GetKeyDown(KeyCode.D) && this.jr_go == null && bag.items.ContainsKey(bag.item_list[item_num]))
                 {
                     bag.item_list[item_num].jr_fab = this.jr_fab;
@@ -186,10 +199,11 @@ public class BattleSystem : MonoBehaviour
                     p_state = PlayerState.HEALING_ITEM;
                 }
 
+                // CHANGE ITEM
                 if (Input.GetKeyDown(KeyCode.S))
                 {
                     bag.sounds[3].Play();
-                    if (item_num + 1 == 3)
+                    if (item_num + 1 == bag.item_list.Count)
                     {
                         item_num = 0;
                         Debug.Log($"ITEM INDEX: {item_num}");
@@ -197,6 +211,7 @@ public class BattleSystem : MonoBehaviour
                         {
                             Debug.Log($"Current Item: {bag.item_list[item_num].name}");
                             Debug.Log($"Amt: {bag.items[bag.item_list[item_num]]}");
+                            
                         }
                         catch (KeyNotFoundException e)
                         {
@@ -216,9 +231,11 @@ public class BattleSystem : MonoBehaviour
                             
                         }
                     }
-                    
+                    p_cur_item.text = $"{bag.item_list[item_num].name} | {bag.items[bag.item_list[item_num]]}";
+
                 }
 
+                // CHANGE MAGIC
                 if (Input.GetKeyDown(KeyCode.X))
                 {
                     bag.sounds[3].Play();
@@ -227,16 +244,19 @@ public class BattleSystem : MonoBehaviour
                         mag_num = 0;
                         Debug.Log($"ITEM INDEX: {mag_num}");
                         Debug.Log($"Current Magic Attack: {player.magic_list[mag_num]} | Cost: {player.magic_list[mag_num].cost}MP");
+                        p_cur_magic.text = $"Magic: {player.magic_list[mag_num]} | Cost: {player.magic_list[mag_num].cost}MP";
                     }
                     else
                     {
 
                         Debug.Log($"ITEM INDEX: {++mag_num}");
                         Debug.Log($"Current Magic Attack: {player.magic_list[mag_num]} | Cost: {player.magic_list[mag_num].cost}MP");
+                        p_cur_magic.text = $"Magic: {player.magic_list[mag_num]} | Cost: {player.magic_list[mag_num].cost}MP";
                     }
 
                 }
 
+                // EQUIP/UNEQUIP CHARGE RING
                 if (Input.GetKeyDown(KeyCode.V)) 
                 {
                     bag.sounds[3].Play();
@@ -250,6 +270,18 @@ public class BattleSystem : MonoBehaviour
                         player.ring_equips.Remove(player.charge_piece);
                         Debug.Log($"BATTLE SYSTEM: {player.name} unequips their {player.charge_piece.name} from their Judgement Ring");
                     }
+                }
+
+                // GET MAGIC DESCRIPTION
+                if (Input.GetKeyDown(KeyCode.F)) 
+                {
+                    Debug.Log($"{player.magic_list[mag_num].name}: {player.magic_list[mag_num].description}");
+                }
+
+                // GET CONTROLS
+                if (Input.GetKeyDown(KeyCode.G))
+                {
+                    Debug.Log($"Z: Hit Ring, A: Standard Ring, C: Magic Ring, D: Item Ring, S: Change Item, X: Change Magic, V: Equip Ring, F: Magic Description");
                 }
 
                 // HANDLE STATE OF PLAYER TURN HERE
@@ -296,6 +328,7 @@ public class BattleSystem : MonoBehaviour
                         break;
                     case PlayerState.STANDARD_ATTACK_DONE:
                         player.StandardAttack(enemy);
+                        // Put this into it's own member function in player
                         player.sp -= 1;
                         player.hits = 0;
                         player.strikes = 0;
@@ -372,6 +405,7 @@ public class BattleSystem : MonoBehaviour
                     state = BattleState.LOSE;
                 break;
             case BattleState.WIN:
+                e_info.text = $"{enemy.name} 0HP";
                 sounds[0].Stop();
                 sounds[1].Play();
                 player.is_winner = true;
@@ -423,6 +457,23 @@ public class BattleSystem : MonoBehaviour
         Debug.Log("BATTLE SYSTEM: Removing Ring From Scene");
         float s = 0.5f;
         yield return new WaitForSeconds(s);
-        DestroyImmediate(GameObject.FindGameObjectsWithTag("Ring")[0]);
+        DestroyImmediate(GameObject.FindGameObjectsWithTag("JR")[0]);
+    }
+
+    // HELPERS TO OUTPUT DEBUG LOGS TO THE GAME VIEW
+    void OnEnable()
+    {
+        Application.logMessageReceived += HandleLog;
+    }
+
+    void OnDisable()
+    {
+        Application.logMessageReceived -= HandleLog;
+    }
+
+    void HandleLog(string logString, string stackTrace, LogType type)
+    {
+        output = logString;
+        stack = stackTrace;
     }
 }

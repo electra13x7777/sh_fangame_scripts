@@ -7,7 +7,7 @@ public class Cure : Magic
 {
     public Bag bag;
     public override string name { get { return "Cure"; } }
-    public override string description { get { return string.Empty; } }
+    public override string description { get { return "Restores a small amount of HP to one ally."; } }
     public override int level { get { return 1; } }
     public override int ring_pieces { get { return 1; } }
     public override MagicType type { get { return MagicType.HEALING; } }
@@ -44,6 +44,7 @@ public class Cure : Magic
             temp = (float)(this.base_damage) * ((player.is_tech) ? player.tech_ring_strike_bonus : player.normal_ring_strike_bonus);
             base_damage = Convert.ToInt32(temp);
         }
+        
         //this.base_damage += this.base_damage/4;
 
         if (player.hp + base_damage >= player.MAX_HP)

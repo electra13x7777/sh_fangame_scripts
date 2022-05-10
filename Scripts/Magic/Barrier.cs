@@ -2,11 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Surge : Magic
+public class Barrier : Magic
 {
     public Bag bag;
-    public override string name { get { return "Surge"; } }
-    public override string description { get { return "Increases Special Attack for one ally by 33~36%"; } }
+    public override string name { get { return "Barrier"; } }
+    public override string description { get { return "	Increases Special Defense for one ally by 33~36%"; } }
     public override int level { get { return 1; } }
     public override int ring_pieces { get { return 1; } }
     public override MagicType type { get { return MagicType.BUFF; } }
@@ -42,30 +42,32 @@ public class Surge : Magic
         if (is_strike)
         {
             // Avoid overwriting player buffs
-            if (player.s_atk_buff != 1.0f)
+            if (player.s_def_buff != 1.0f)
             {
-                player.s_atk_buff += (player.is_tech) ? 1.43f : 1.36f;
+                player.s_def_buff += (player.is_tech) ? 1.43f : 1.36f;
             }
             else
             {
-                player.s_atk_buff = (player.is_tech) ? 1.43f : 1.36f;
+                player.s_def_buff = (player.is_tech) ? 1.43f : 1.36f;
             }
-            Debug.Log($"MAGIC SURGE: {player.name} increases their S.ATK by {((player.is_tech) ? 1.43f : 1.36f) * 100}%!");
+
+            Debug.Log($"MAGIC BARRIER: {player.name} increases their S.DEF by {((player.is_tech) ? 1.43f : 1.36f) * 100}%!");
         }
         else
         {
-            if (player.s_atk_buff != 1.0f)
+            if (player.s_def_buff != 1.0f)
             {
-                player.s_atk_buff += 1.30f;
+                player.s_def_buff += 1.30f;
             }
             else
             {
-                player.s_atk_buff = 1.30f;
+                player.s_def_buff = 1.30f;
             }
-            Debug.Log($"MAGIC SURGE: {player.name} increases their S.ATK by 130%!");
+            Debug.Log($"MAGIC BARRIER: {player.name} increases their S.DEF by 130%!");
         }
+
         if (!player.has_buffs) { player.has_buffs = true; }
-        player.s_atk_buff_count = 6; // Will instantly decrement to 5
+        player.s_def_buff_count = 6; // Will instantly decrement to 5
 
         if (player.mp - this.cost <= 0)
         {

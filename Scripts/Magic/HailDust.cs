@@ -7,14 +7,14 @@ public class HailDust : Magic
 {
     public Bag bag;
     public override string name { get { return "Hail Dust"; } }
-    public override string description { get { return string.Empty; } }
+    public override string description { get { return "Small AOE, 3 hit, Standard hit."; } }
     public override int level { get { return 1; } }
     public override int ring_pieces { get { return 2; } }
     public override MagicType type { get { return MagicType.ICE; } }
 
     public override int base_damage { get { return 15; } }
     public override int cost { get { return 16; } }
-    public int hits { get { return 2; } }
+    public int hits { get { return 3; } }
     public override int ring_index { get { return 7; } }
 
     public override bool is_weakness(EnemyBattle enemy)

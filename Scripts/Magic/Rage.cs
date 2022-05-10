@@ -6,7 +6,7 @@ public class Rage : Magic
 {
     public Bag bag;
     public override string name { get { return "Rage"; } }
-    public override string description { get { return string.Empty; } }
+    public override string description { get { return "Increases Physical Attack for one ally by 33~36%"; } }
     public override int level { get { return 1; } }
     public override int ring_pieces { get { return 1; } }
     public override MagicType type { get { return MagicType.BUFF; } }
@@ -44,14 +44,14 @@ public class Rage : Magic
             // Avoid overwriting player buffs
             if (player.p_atk_buff != 1.0f)
             {
-                player.p_atk_buff += (player.is_tech) ? 1.46f : 1.36f;
+                player.p_atk_buff += (player.is_tech) ? 1.43f : 1.36f;
             }
             else
             {
-                player.p_atk_buff = (player.is_tech) ? 1.46f : 1.36f;
+                player.p_atk_buff = (player.is_tech) ? 1.43f : 1.36f;
             }
 
-            Debug.Log($"MAGIC RAGE: {player.name} increases their P.ATK by {((player.is_tech) ? 1.46f : 1.36f) * 100}%!");
+            Debug.Log($"MAGIC RAGE: {player.name} increases their P.ATK by {((player.is_tech) ? 1.43f : 1.36f) * 100}%!");
         }
         else
         {

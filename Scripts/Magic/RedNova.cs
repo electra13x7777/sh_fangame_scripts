@@ -6,7 +6,7 @@ public class RedNova : Magic
 {
     public Bag bag;
     public override string name { get { return "Red Nova"; } }
-    public override string description { get { return string.Empty; } }
+    public override string description { get { return "Small AOE, Medium range, 1 hit, Hard-hit."; } }
     public override int level { get { return 1; } }
     public override int ring_pieces { get { return 2; } }
     public override MagicType type { get { return MagicType.FIRE; } }
